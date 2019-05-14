@@ -128,9 +128,6 @@ void launchMissile(WINDOW *win, fmhead *fmp, cursor *c) {
             newmissile->next = fmp->next;
         fmp->next = newmissile;
     }
-    else if(k == ERR) {
-        ;
-    }
 }
 
 void moveMissiles(WINDOW *win, fmhead *fmp) {
@@ -140,17 +137,13 @@ void moveMissiles(WINDOW *win, fmhead *fmp) {
 
         if(node->y > node->targetY)
             node->y -= node->speedY;
-        //else if(abs(node->targetY - node->y) < node->speedY * node->speedmod)
-        //    node->x == node->targetX;
 
         if(node->x > node->targetX)
             node->x -= node->speedX;
         else if(node->x < node->targetX)
             node->x += node->speedX;
-        //else if(abs(node->targetX - node->x) < node->speedX * node->speedmod)
-        //    node->x == node->targetX;
 
-        if(/*node->x == node->targetX &&*/ node->y < node->targetY) {
+        if(node->y < node->targetY) {
             mvwprintw(win, (int)node->y, (int)node->x, " ");
         }
         else {
@@ -217,7 +210,7 @@ int main() {
         moveCursor(pc, win);    //update cursor
         launchMissile(win, fhead, pc);
         moveMissiles(win, fhead);
-        sleep(0.05);
+        sleep(0.01);
         wrefresh(win);          //update windows
     }
 
