@@ -1,5 +1,7 @@
 #include <ncurses.h>
 #include <stdlib.h>
+#include <math.h>
+#include <unistd.h>
 
 #define WIDTH 256       //width of window
 #define HEIGHT 64       //height of window
@@ -26,9 +28,11 @@ typedef struct battery { //
 
 typedef struct fmissile {   //player missiles
     struct fmissile *next;
-    int speed;              //how fast
-    int x;                  //current coordinates
-    int y;
+    float speedmod;
+    float speedX;             //speed on x axis
+    float speedY;             //speed on y axis
+    float x;                  //current coordinates
+    float y;
     int targetX;            //target coordinates
     int targetY;
 } fmissile;
@@ -51,10 +55,10 @@ typedef struct fmhead {     //friendly missiles list head
 } fmhead;
 
 void drawScene(WINDOW * win) {
-    city cities[6];
-    battery batteries[3];
+    city cities[6];                          //creates array of cities
+    battery batteries[3];                    //creates array of batteries
     start_color();
-    init_pair(1, COLOR_BLACK, COLOR_RED);
+    init_pair(1, COLOR_BLACK, COLOR_RED);    //initalises color pairs
     init_pair(2, COLOR_BLACK, COLOR_BLUE);
     init_pair(3, COLOR_BLUE, COLOR_BLACK);
     init_pair(4, COLOR_BLACK, COLOR_BLACK);
@@ -107,28 +111,53 @@ void launchMissile(WINDOW *win, fmhead *fmp, cursor *c) {
     char k = wgetch(win);
     if(k == 'q') {
         fmissile *newmissile = (fmissile*)malloc(sizeof(fmissile));
-        newmissile->speed = 5;
-        newmissile->x = WIDTH/2;
-        newmissile->y = 7*(HEIGHT/8) - 10;
+        newmissile->x = 1 + WIDTH/2;
+        newmissile->y = 7*(HEIGHT/8) - 5;
         newmissile->targetX = c->x;
         newmissile->targetY = c->y;
+        newmissile->speedmod = 0.002;
+
+        float dx = abs(newmissile->targetX - newmissile->x) / 2;
+        float dy = abs(newmissile->targetY - newmissile->y);
+        float length = sqrtf(dx*dx+dy*dy);
+
+        newmissile->speedX = newmissile->speedmod * 2 * (dx/length);
+        newmissile->speedY = newmissile->speedmod * (dy/length);
+
         if(fmp->next != NULL)
             newmissile->next = fmp->next;
         fmp->next = newmissile;
+    }
+    else if(k == ERR) {
+        ;
     }
 }
 
 void moveMissiles(WINDOW *win, fmhead *fmp) {
     fmissile *node = fmp->next;
     while(node != NULL) {
-        mvwprintw(win, node->y, node->x, " ");
+        mvwprintw(win, (int)node->y, (int)node->x, " ");
+
         if(node->y > node->targetY)
-            node->y -= node->speed;
+            node->y -= node->speedY;
+        //else if(abs(node->targetY - node->y) < node->speedY * node->speedmod)
+        //    node->x == node->targetX;
+
         if(node->x > node->targetX)
-            node->x -= node->speed;
+            node->x -= node->speedX;
         else if(node->x < node->targetX)
-            node->x += node->speed;
-        mvwprintw(win, node->y, node->x, "Y");
+            node->x += node->speedX;
+        //else if(abs(node->targetX - node->x) < node->speedX * node->speedmod)
+        //    node->x == node->targetX;
+
+        if(/*node->x == node->targetX &&*/ node->y < node->targetY) {
+            mvwprintw(win, (int)node->y, (int)node->x, " ");
+        }
+        else {
+            wattron(win, COLOR_PAIR(3));
+            mvwprintw(win, (int)node->y, (int)node->x, "o");
+            wattroff(win, COLOR_PAIR(3));
+        }
         node = node->next;
     }
 }
@@ -140,7 +169,7 @@ void moveCursor(cursor *pc, WINDOW *win) {
     wattron(win, COLOR_PAIR(3));
 		switch(k)
 		{	case KEY_UP:
-                        if(pc->y > 3)
+                        if(pc->y > 4)
                             pc->y -= 2;
                         break;
             case KEY_DOWN:
@@ -155,10 +184,11 @@ void moveCursor(cursor *pc, WINDOW *win) {
                         if(pc->x < WIDTH - 6)
                             pc->x += 4;
                         break;
+            case ERR:
+                break;
 		}
     mvwprintw(win, (*pc).y, (*pc).x, "+");
     wattroff(win, COLOR_PAIR(3));
-    wrefresh(win);
 }
 
 int main() {
@@ -180,11 +210,15 @@ int main() {
     keypad(win, TRUE);                  //enables key input
     mousemask(ALL_MOUSE_EVENTS, NULL);  //enable mouse input
 
+    noecho();
+    nodelay(win, true);
+
     while(!P) {                 //while unpaused
         moveCursor(pc, win);    //update cursor
-        wrefresh(win);          //update window
         launchMissile(win, fhead, pc);
-        moveMissiles(win, fhead); 
+        moveMissiles(win, fhead);
+        sleep(0.05);
+        wrefresh(win);          //update windows
     }
 
 
