@@ -1,5 +1,6 @@
 #include <ncurses.h>
 #include <stdlib.h>
+#include <time.h>
 #include <math.h>
 #include <unistd.h>
 
@@ -57,10 +58,12 @@ typedef struct fmhead {     //friendly missiles list head
     struct fmissile *next;
 } fmhead;
 
-city cities[6];                 //creates array of cities
-battery batteries[3];           //creates array of batteries
-WINDOW *win;                    //pointer to window
+city cities[6];                     //creates array of cities
+battery batteries[3];               //creates array of batteries
+WINDOW *win;                        //pointer to window
 int explosion[WIDTH][7*(HEIGHT/8)]; //array for each space on window
+bool endgame = false;
+int score = 0;
 
 void drawScene() {
     start_color();
@@ -73,7 +76,7 @@ void drawScene() {
 
     wattron(win, COLOR_PAIR(1));
     for(int i = 1; i < WIDTH-1; i++)
-        for(int j = 0; j < 5; j++)
+        for(int j = 0; j < 4; j++)
             mvwprintw(win, 2+j+(HEIGHT/8)*7, i, ".");
 
     for(int i = 0; i < 1; i++) {
@@ -83,11 +86,11 @@ void drawScene() {
         batteries[i].destroyed = false;
         batteries[i].stock = 10;
 
-        mvwprintw(win, batteries[i].y - 4, WIDTH/2 - 3, ".........");
-        mvwprintw(win, batteries[i].y - 3, WIDTH/2 - 4, ".....Y.....");
-        mvwprintw(win, batteries[i].y - 2, WIDTH/2 - 5, ".....Y.Y.....");
-        mvwprintw(win, batteries[i].y - 1, WIDTH/2 - 6, ".....Y.Y.Y.....");
-        mvwprintw(win, batteries[i].y - 0, WIDTH/2 - 7, ".....Y.Y.Y.Y.....");
+        mvwprintw(win, batteries[i].y - 4, WIDTH/2 - 3,     ".........");
+        mvwprintw(win, batteries[i].y - 3, WIDTH/2 - 4,    "...........");
+        mvwprintw(win, batteries[i].y - 2, WIDTH/2 - 5,   ".............");
+        mvwprintw(win, batteries[i].y - 1, WIDTH/2 - 6,  "...............");
+        mvwprintw(win, batteries[i].y - 0, WIDTH/2 - 7, ".................");
         mvwprintw(win, batteries[i].y + 1, WIDTH/2 - 7, ".................");
     }
     wattron(win, COLOR_PAIR(2));
@@ -97,13 +100,14 @@ void drawScene() {
         cities[i].x = (WIDTH/7)*(i+1); 
         cities[i].destroyed = false;
 
-        mvwprintw(win, cities[i].y, cities[i].x + 1, "=====");
+        mvwprintw(win, cities[i].y, cities[i].x + 1,        "=====");
         mvwprintw(win, cities[i].y + 1, cities[i].x - 2, "===========");
         wattron(win, A_UNDERLINE);
         mvwprintw(win, cities[i].y + 2, cities[i].x - 2, "===========");
         wattroff(win, A_UNDERLINE);
     }
     wattroff(win, COLOR_PAIR(2));
+    mvwprintw(win, HEIGHT-1, 3, "SCORE: %06d", score);
     wrefresh(win);
 }
 
@@ -116,91 +120,118 @@ WINDOW * gameWindow() {
 }
 
 void launchMissile(fmhead *fmp, cursor *c) {
-    char k = wgetch(win);
+    fmissile *newmissile = (fmissile*)malloc(sizeof(fmissile));
+    newmissile->x = 1 + WIDTH/2;
+    newmissile->y = 7*(HEIGHT/8) - 5;
+    newmissile->targetX = c->x;
+    newmissile->targetY = c->y;
+    newmissile->speedmod = 0.1;
 
-    if(k == 'q') {
-        fmissile *newmissile = (fmissile*)malloc(sizeof(fmissile));
-        newmissile->x = 1 + WIDTH/2;
-        newmissile->y = 7*(HEIGHT/8) - 5;
-        newmissile->targetX = c->x;
-        newmissile->targetY = c->y;
-        newmissile->speedmod = 0.002;
+    float dx = abs(newmissile->targetX - newmissile->x) / 2;
+    float dy = abs(newmissile->targetY - newmissile->y);
+    float length = sqrtf(dx*dx+dy*dy);
 
-        float dx = abs(newmissile->targetX - newmissile->x) / 2;
-        float dy = abs(newmissile->targetY - newmissile->y);
-        float length = sqrtf(dx*dx+dy*dy);
+            
+    newmissile->speedX = newmissile->speedmod * 2 * (dx/length);
+    newmissile->speedY = newmissile->speedmod * (dy/length);
+    if(newmissile->targetX < newmissile->x)
+        newmissile->speedX = -(newmissile->speedX);
 
-        
-        newmissile->speedX = newmissile->speedmod * 2 * (dx/length);
-        newmissile->speedY = newmissile->speedmod * (dy/length);
-        if(newmissile->targetX < newmissile->x)
-            newmissile->speedX = -(newmissile->speedX);
-
-        if(fmp->next != NULL)
-            newmissile->next = fmp->next;
-        fmp->next = newmissile;
-    }
-    else
-        return;
+    newmissile->next = fmp->next;
+    fmp->next = newmissile;
 }
 
 void createExplosion(int x, int y) {
+    int count = 0;
     for(int i = 0; i < 3; i++)
         for(int j = 0; j < 3; j++) {
-            explosion[(x-1) + i][(y-1) + j] = 1000000;
+            explosion[(x-1) + i][(y-1) + j] = 100;
             wattron(win, COLOR_PAIR(0));
-            mvwprintw(win, (x-1)+i, (y-1)+j, "*");
+            mvwprintw(win, (y-1)+j, (x-1)+i, "*");
+            for(int k = 0; k < 6; k++) {
+                if(cities[k].x == x && cities[k].y == y) 
+                    cities[k].destroyed == true;
+                if(cities[k].destroyed == true)
+                    count++;
+                    if(count == 6) {
+                        endgame = true;
+                    }
+            }
         }
 }
 
+void removeTrail(fmissile *fm) {
+    while(fm->y < 7*(HEIGHT/8) - 5) {
+        fm->y += fm->speedY;
+        fm->x -= fm->speedX;
+        mvwprintw(win, fm->y, fm->x, " ");
+    }
+}
+
 void moveEntities(fmhead *fmp, emhead *emp) {
-    fmissile *prevnode = NULL;
     fmissile *node = fmp->next;
     while(node != NULL) {
-        wattron(win, COLOR_PAIR(3));
-        mvwprintw(win, (int)node->y, (int)node->x, ".");
-
-        node->y -= node->speedY;
-        node->x += node->speedX;
 
         if(node->y < node->targetY) {
             mvwprintw(win, (int)node->y, (int)node->x, " ");
             createExplosion((int)node->x, (int)node->y);
-            prevnode->next = node->next;
-            node = node->next;
+            removeTrail(node);
+            
+            fmissile *freenode = node;
+            if(fmp->next == node) {
+                fmp->next = node->next;
+                node = node->next;
+                free(freenode);
+            }
+            else {
+                node = node->next;
+                free(freenode);
+            }
+
         }
         else {
             wattron(win, COLOR_PAIR(3));
+            mvwprintw(win, (int)node->y, (int)node->x, ".");
+            node->y -= node->speedY;
+            node->x += node->speedX;
+            wattron(win, COLOR_PAIR(3));
             mvwprintw(win, (int)node->y, (int)node->x, "o");
             wattroff(win, COLOR_PAIR(3));
-            prevnode = node;
+
             node = node->next;
         }
     }
 
-    emissile *prevenode = NULL;
     emissile *enode = emp->next;
     while(enode != NULL) {
-        wattron(win, COLOR_PAIR(6));
-        mvwprintw(win, (int)enode->y, (int)enode->x, ".");
-
-        enode->y += enode->speedY;
-        enode->x += enode->speedX;
-
         if(enode->y > enode->targetY) {
             mvwprintw(win, (int)enode->y, (int)enode->x, " ");
-            createExplosion((int)node->x, (int)node->y);
-            prevenode->next = enode->next;
-            enode = enode->next;
+            createExplosion((int)enode->x, (int)enode->y);
+            
+            emissile *freeenode = enode;
+            if(emp->next == enode) {
+                emp->next = emp->next->next;
+                enode = enode->next;
+                free(freeenode);
+            }
+            else {
+                enode = enode->next;
+                free(freeenode);
+            }
+            score += 25;
+            mvwprintw(win, HEIGHT-1, 3, "SCORE: %06d", score);
         }
         else {
+            wattron(win, COLOR_PAIR(6));
+            mvwprintw(win, (int)enode->y, (int)enode->x, ".");
+            enode->y += enode->speedY;
+            enode->x += enode->speedX;
             wattron(win, COLOR_PAIR(5));
             mvwprintw(win, (int)enode->y, (int)enode->x, "o");
             wattroff(win, COLOR_PAIR(5));
-            prevenode = enode;
+
             enode = enode->next;
         }
-        enode = enode->next;
     }
 
     for(int i = 0; i < WIDTH; i++)
@@ -212,45 +243,31 @@ void moveEntities(fmhead *fmp, emhead *emp) {
             }
 }
 
-void moveCursor(cursor *pc, WINDOW *win) {
-    int k = wgetch(win);
+void moveCursor(cursor *pc, int x, int y) {
     wattron(win, COLOR_PAIR(4));
     mvwprintw(win, (*pc).y, (*pc).x, " ");
     wattron(win, COLOR_PAIR(3));
 
-	switch(k)
-	{	case KEY_UP:
-                    if(pc->y > 4)
-                        pc->y -= 2;
-                    break;
-        case KEY_DOWN:
-                    if(pc->y < (HEIGHT/8)*7 - 8)
-                        pc->y += 2;
-                    break;
-        case KEY_LEFT:
-                    if(pc->x > 6)
-                        pc->x -= 4;
-                    break;
-        case KEY_RIGHT:
-                    if(pc->x < WIDTH - 6)
-                        pc->x += 4;
-                    break;
-        case ERR:
-            break;
-	}
+    pc->y -= y;
+    pc->x += x;
+    if(pc->y < 4 || pc->y > (HEIGHT/8)*7 - 8)
+        pc->y += y;
+    if(pc->x <= 6 || pc->x >= WIDTH - 6)
+        pc->x -= x;   
 
-    mvwprintw(win, (*pc).y, (*pc).x, "+");
+    mvwprintw(win, pc->y, pc->x, "+");
     wattroff(win, COLOR_PAIR(3));
 }
 
 void launchEnemy(emhead *emp) {
-    if(rand() % 70000 == 1 && emp->remaining != 0) {
+    if(rand() % 700 == 1 && emp->remaining != 0) {
+        srand(time(0));
         emissile *newmissile = (emissile*)malloc(sizeof(emissile));
         newmissile->x = 1 + (rand() % WIDTH - 2);
         newmissile->y = 1;
-        newmissile->targetX = rand() % WIDTH;
+        newmissile->targetX = cities[rand() % 6].x;
         newmissile->targetY = (HEIGHT/8)*7;
-        newmissile->speedmod = 0.0006;
+        newmissile->speedmod = 0.05;
 
         float dx = abs(newmissile->targetX - newmissile->x) / 2;
         float dy = abs(newmissile->targetY - newmissile->y);
@@ -267,6 +284,29 @@ void launchEnemy(emhead *emp) {
     }
 }
 
+void playerInput(int k, fmhead *fhead, cursor *pc) {
+    switch(k) 
+        {   
+            case KEY_UP:
+                moveCursor(pc, 0, 2);
+                break;
+            case KEY_DOWN:
+                moveCursor(pc, 0, -2);
+                break;        
+            case KEY_LEFT:
+                moveCursor(pc, -4, 0);
+                break;        
+            case KEY_RIGHT:
+                moveCursor(pc, 4, 0);
+                break;
+            case 'q':
+                launchMissile(fhead, pc);   
+                break;  
+            case ERR:
+                break;
+	    }
+}
+
 int main() {
     
     bool P = false;    //is game paused
@@ -279,23 +319,25 @@ int main() {
     ehead->remaining = 200000;
 
     initscr();
+    int k;
     curs_set(0);                        //cursor invisible
     cbreak();
     win = gameWindow(HEIGHT, WIDTH);    //creates window/border
     drawScene();                        //sets initial stage
-    keypad(win, TRUE);                  //enables key input
+    keypad(stdscr, TRUE);                  //enables key input
     mousemask(ALL_MOUSE_EVENTS, NULL);  //enable mouse input
 
     noecho();
     nodelay(win, true);
+    nodelay(stdscr, true);
 
-    while(!P) {                         //while unpaused
-        moveCursor(&c, win);            //update cursor
-        launchMissile(fhead, &c);
-        launchEnemy(ehead);
-        moveEntities(fhead, ehead);
-        sleep(1/60);
-        wrefresh(win);                  //update windows
+    while(!endgame) {                          //while unpaused
+        k = getch();
+        playerInput(k, fhead, &c);       //uses key inputs
+        launchEnemy(ehead);              //laucnhes enemy missiles
+        moveEntities(fhead, ehead);      //updates positions
+        usleep(10000);                   //creates delay before refresh
+        wrefresh(win);                   //update windows
     }
 
     getch();
