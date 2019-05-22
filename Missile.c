@@ -130,22 +130,23 @@ void launchMissile(fmhead *fmp, cursor *c) {
     float dx = abs(newmissile->targetX - newmissile->x) / 2;
     float dy = abs(newmissile->targetY - newmissile->y);
     float length = sqrtf(dx*dx+dy*dy);
-
             
     newmissile->speedX = newmissile->speedmod * 2 * (dx/length);
     newmissile->speedY = newmissile->speedmod * (dy/length);
     if(newmissile->targetX < newmissile->x)
         newmissile->speedX = -(newmissile->speedX);
-
-    newmissile->next = fmp->next;
+    
+    newmissile->next = NULL;
+    if(fmp->next != NULL)
+        newmissile->next = fmp->next;
     fmp->next = newmissile;
 }
 
 void createExplosion(int x, int y) {
     int count = 0;
-    for(int i = 0; i < 3; i++)
-        for(int j = 0; j < 3; j++) {
-            explosion[(x-1) + i][(y-1) + j] = 100;
+    for(int i = 0; i < 5; i++)
+        for(int j = 0; j < 4; j++) {
+            explosion[(x-1) + i][(y-1) + j] = 500;
             wattron(win, COLOR_PAIR(0));
             mvwprintw(win, (y-1)+j, (x-1)+i, "*");
             for(int k = 0; k < 6; k++) {
@@ -160,11 +161,19 @@ void createExplosion(int x, int y) {
         }
 }
 
-void removeTrail(fmissile *fm) {
+void removeFTrail(fmissile *fm) {
     while(fm->y < 7*(HEIGHT/8) - 5) {
         fm->y += fm->speedY;
         fm->x -= fm->speedX;
         mvwprintw(win, fm->y, fm->x, " ");
+    }
+}
+
+void removeETrail(emissile *em) {
+    while(em->y > 3) {
+        em->y -= em->speedY;
+        em->x -= em->speedX;
+        mvwprintw(win, em->y, em->x, " ");
     }
 }
 
@@ -175,9 +184,10 @@ void moveEntities(fmhead *fmp, emhead *emp) {
         if(node->y < node->targetY) {
             mvwprintw(win, (int)node->y, (int)node->x, " ");
             createExplosion((int)node->x, (int)node->y);
-            removeTrail(node);
+            removeFTrail(node);
             
-            fmissile *freenode = node;
+            fmissile *freenode; //= (fmissile*)malloc(sizeof(fmissile));
+            freenode = node;
             if(fmp->next == node) {
                 fmp->next = node->next;
                 node = node->next;
@@ -204,9 +214,10 @@ void moveEntities(fmhead *fmp, emhead *emp) {
 
     emissile *enode = emp->next;
     while(enode != NULL) {
-        if(enode->y > enode->targetY) {
+        if(enode->y > enode->targetY || explosion[(int)enode->x][(int)enode->y] > 0) {
             mvwprintw(win, (int)enode->y, (int)enode->x, " ");
             createExplosion((int)enode->x, (int)enode->y);
+            removeETrail(enode);
             
             emissile *freeenode = enode;
             if(emp->next == enode) {
@@ -216,7 +227,7 @@ void moveEntities(fmhead *fmp, emhead *emp) {
             }
             else {
                 enode = enode->next;
-                free(freeenode);
+            free(freeenode);
             }
             score += 25;
             mvwprintw(win, HEIGHT-1, 3, "SCORE: %06d", score);
@@ -260,7 +271,7 @@ void moveCursor(cursor *pc, int x, int y) {
 }
 
 void launchEnemy(emhead *emp) {
-    if(rand() % 700 == 1 && emp->remaining != 0) {
+    if(rand() % 1000 == 1 && emp->remaining != 0) {
         srand(time(0));
         emissile *newmissile = (emissile*)malloc(sizeof(emissile));
         newmissile->x = 1 + (rand() % WIDTH - 2);
