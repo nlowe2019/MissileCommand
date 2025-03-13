@@ -8,7 +8,7 @@ SCC110 Coursework: A remake of the Atari game Missile Command, built using C wit
 
 ### What is [Ncurses](https://en.wikipedia.org/wiki/Ncurses)?
 
-> ncurses (new curses) is a programming library for creating textual user interfaces (TUIs) that work across a wide variety of terminals; it is written in a way that attempts to optimize the commands that are sent to the terminal, so as reduce the latency experienced when updating the displayed content. [^1](https://en.wikipedia.org/wiki/Ncurses)
+> ncurses (new curses) is a programming library for creating textual user interfaces (TUIs) that work across a wide variety of terminals; it is written in a way that attempts to optimize the commands that are sent to the terminal, so as reduce the latency experienced when updating the displayed content. [[^1](https://en.wikipedia.org/wiki/Ncurses)]
 
 
 
