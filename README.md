@@ -15,6 +15,8 @@ SCC110 Coursework: A remake of the Atari game Missile Command, built using C wit
 ### Features
 
 WIP
+
+- [x] In-Terminal Rendering Using Ncurses
 - [x] Animated Missile trails and explosions
 - [x] Endless Level System
 - [x] Scoring based on missiles stopped and remaining cities/ammo
