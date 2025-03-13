@@ -1,5 +1,5 @@
 
-# Missile Command (Ncurses)
+# 🚀 Missile Command (Ncurses)
 
 A simple Missile Command game built using C and Ncurses. Defend your cities from incoming missiles by launching counter-missiles!
 
