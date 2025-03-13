@@ -1,7 +1,7 @@
 
 # 🚀 Missile Command (Ncurses)
 
-A remake of the Atari game Missile Command, built using C with the Ncurses library. Defend your cities from incoming missiles by launching counter-missiles!
+SCC110 Coursework: A remake of the Atari game Missile Command, built using C with the Ncurses library. Defend your cities from incoming missiles by launching counter-missiles!
 
 ![missile_title-gif](https://github.com/user-attachments/assets/5622aa88-f01f-4a3e-824a-988ef29ca917)
 
