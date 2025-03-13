@@ -47,8 +47,8 @@ Prerequisites
 
 On Linux systems:
 
-`sudo apt install libncurses-dev`
-`git clone https://github.com/nlowe2019/missile-command.git`
-`cd MissileCommand`
-`gcc -o missile_command missile_command.c sprites.c -lncurses -lm`
-`./missile_command` 
+`sudo apt install libncurses-dev`<br>
+`git clone https://github.com/nlowe2019/MissileCommand.git`<br>
+`cd MissileCommand`<br>
+`gcc -o missile_command missile_command.c sprites.c -lncurses -lm`<br>
+`./missile_command` <br>
