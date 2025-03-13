@@ -3,7 +3,7 @@
 
 SCC110 Coursework: A remake of the Atari game Missile Command, built using C with the Ncurses library. Defend your cities from incoming missiles by launching counter-missiles!
 
-![missile_title-gif](https://github.com/user-attachments/assets/5622aa88-f01f-4a3e-824a-988ef29ca917)
+![ezgif com-resize](https://github.com/user-attachments/assets/0b050898-ad8a-4078-90e2-05bb709f6dfe)
 
 
 ### What is [Ncurses](https://en.wikipedia.org/wiki/Ncurses)?
@@ -13,7 +13,6 @@ SCC110 Coursework: A remake of the Atari game Missile Command, built using C wit
 [^1]: https://en.wikipedia.org/wiki/Ncurses
 
 
+![missile_gameplay_1-gif-ezgif com-resize](https://github.com/user-attachments/assets/95e17c5a-b1e8-4ef9-8b4d-d172eb0f7b5a)
 
-![missile_gameplay_1-gif](https://github.com/user-attachments/assets/58f1595b-a5bc-4f13-a22a-a2d799330740)
-
-![missile_gameplay_2-gif](https://github.com/user-attachments/assets/93e08c79-f43a-4b6f-920a-13aaf0b184aa)
+![missile_gameplay_2-gif-ezgif com-resize](https://github.com/user-attachments/assets/60db1a0f-2df4-4474-ad72-7d3551efd05d)
